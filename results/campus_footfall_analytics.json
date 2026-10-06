@@ -1,0 +1,73 @@
+{
+  "total_telemetry_events": 3000,
+  "total_entries": 1477,
+  "unique_students_monitored": 2532,
+  "zone_distribution": {
+    "LectureHalls": 320,
+    "Cafeteria": 292,
+    "Library": 291,
+    "Sports": 290,
+    "Labs": 284
+  },
+  "hourly_distribution": {
+    "7": 29,
+    "8": 77,
+    "9": 147,
+    "10": 168,
+    "11": 144,
+    "12": 100,
+    "13": 152,
+    "14": 138,
+    "15": 129,
+    "16": 118,
+    "17": 100,
+    "18": 64,
+    "19": 57,
+    "20": 39,
+    "21": 15
+  },
+  "top_hotspots": [
+    {
+      "zone": "LectureHalls",
+      "entries": 320
+    },
+    {
+      "zone": "Cafeteria",
+      "entries": 292
+    },
+    {
+      "zone": "Library",
+      "entries": 291
+    },
+    {
+      "zone": "Sports",
+      "entries": 290
+    },
+    {
+      "zone": "Labs",
+      "entries": 284
+    }
+  ],
+  "peak_congestion_hours": [
+    {
+      "hour": "10:00",
+      "entries": 168
+    },
+    {
+      "hour": "13:00",
+      "entries": 152
+    },
+    {
+      "hour": "09:00",
+      "entries": 147
+    },
+    {
+      "hour": "11:00",
+      "entries": 144
+    },
+    {
+      "hour": "14:00",
+      "entries": 138
+    }
+  ]
+}

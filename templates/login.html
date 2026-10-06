@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UniPulse 2.0 | Smart Campus Login</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="login-body">
+  <div class="login-wrapper">
+    <div class="login-card">
+      <div class="brand-header">
+        <div class="badge-tag">BIG DATA · AI · REAL-TIME ANALYTICS</div>
+        <h1>UniPulse 2.0</h1>
+        <p class="subtitle">A Big Data Powered Smart Campus Platform</p>
+      </div>
+
+      {% if error %}
+        <div class="alert alert-error">{{ error }}</div>
+      {% endif %}
+
+      <form method="POST" action="/login" class="login-form">
+        <div class="form-group">
+          <label for="username">Campus Username</label>
+          <input type="text" id="username" name="username" placeholder="e.g. student or faculty" required autofocus>
+        </div>
+        <div class="form-group">
+          <label for="password">Security Password</label>
+          <input type="password" id="password" name="password" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Sign In to UniPulse 2.0 &rarr;</button>
+      </form>
+
+      <div class="demo-credentials">
+        <h4>⚡ Demo Portal Accounts:</h4>
+        <div class="cred-grid">
+          <div class="cred-chip" onclick="fillCred('student', 'student123')">
+            <b>Student:</b> <code>student</code> / <code>student123</code>
+          </div>
+          <div class="cred-chip" onclick="fillCred('faculty', 'faculty123')">
+            <b>Faculty:</b> <code>faculty</code> / <code>faculty123</code>
+          </div>
+          <div class="cred-chip" onclick="fillCred('admin', 'admin123')">
+            <b>Admin:</b> <code>admin</code> / <code>admin123</code>
+          </div>
+        </div>
+      </div>
+
+      <div class="login-footer">
+        <p>© UniPulse 2.0 · Big Data Powered Smart Campus Platform</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function fillCred(u, p) {
+      document.getElementById('username').value = u;
+      document.getElementById('password').value = p;
+    }
+  </script>
+</body>
+</html>

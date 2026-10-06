@@ -1,0 +1,25 @@
+{
+  "model_name": "Student Performance & At-Risk Predictor",
+  "algorithm": "Random Forest Ensemble (Classification + Regression)",
+  "samples_trained": 2000,
+  "accuracy": 0.726,
+  "f1_score": 0.7073,
+  "gpa_rmse": 0.5745,
+  "gpa_r2": 0.5931,
+  "feature_importances": {
+    "attendance": 0.4049,
+    "internal_quiz": 0.1543,
+    "lms_logins": 0.0443,
+    "library_hours": 0.1052,
+    "lab_sessions_pct": 0.0784,
+    "assignment_delay": 0.0713,
+    "study_hours": 0.0926,
+    "engagement_score": 0.049
+  },
+  "classes": [
+    "High Achiever",
+    "High Risk",
+    "Moderate Risk",
+    "On Track"
+  ]
+}

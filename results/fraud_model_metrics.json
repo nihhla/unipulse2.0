@@ -1,0 +1,16 @@
+{
+  "model_name": "AI Marketplace Fraud Detector",
+  "algorithm": "Balanced Random Forest Classifier",
+  "accuracy": 0.9867,
+  "f1_score": 0.9048,
+  "feature_cols": [
+    "price_ratio",
+    "seller_age_days",
+    "seller_rating",
+    "past_sales",
+    "daily_listings",
+    "wire_request"
+  ],
+  "total_transactions_analyzed": 3000,
+  "detected_fraud_ratio": 0.0773
+}

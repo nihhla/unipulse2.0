@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UniPulse 2.0 | Smart Campus Dashboard</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="/static/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body class="dashboard-body">
+
+  <!-- TOP NAVIGATION HEADER -->
+  <header class="navbar">
+    <div class="nav-left">
+      <div class="logo-group">
+        <span class="pulse-indicator"></span>
+        <span class="logo-title">UniPulse 2.0</span>
+        <span class="version-chip">Smart Campus Platform</span>
+      </div>
+    </div>
+    
+    <nav class="nav-links">
+      <a href="#overview" class="active">Live KPIs</a>
+      <a href="#navigation">Smart Navigation</a>
+      <a href="#performance">Student ML Predictor</a>
+      <a href="#marketplace">AI Marketplace</a>
+      <a href="#alerts">Alerts Stream</a>
+      <a href="#recommendations">AI Recommendations</a>
+      <a href="#bigdata">Big Data Pipeline</a>
+    </nav>
+
+    <div class="nav-right">
+      <div class="user-badge">
+        <span class="user-role">{{ user.role }}</span>
+        <span class="user-name">{{ user.full_name or user.user }}</span>
+      </div>
+      <a href="/logout" class="btn btn-outline-danger btn-sm">Logout</a>
+    </div>
+  </header>
+
+  <main class="content-container">
+
+    <!-- KPI HERO BANNER -->
+    <section id="overview" class="section-block">
+      <div class="section-header">
+        <div>
+          <h2>⚡ Live Campus Telemetry (IoT Stream)</h2>
+          <p class="section-sub">Real-time edge sensor readings updating every 3 seconds via simulated pub/sub pipeline</p>
+        </div>
+        <div class="live-clock-badge">
+          <span class="live-dot"></span> LIVE STREAM: <span id="clock">Connecting...</span>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon icon-students">👥</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Active Campus Footfall</span>
+            <span class="kpi-val" id="kpi-students">{{ state.students_on_campus }}</span>
+            <span class="kpi-sub">Students & faculty tracked</span>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon icon-occ">🏢</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Overall Campus Occupancy</span>
+            <span class="kpi-val" id="kpi-occupancy">{{ state.occupancy_percent }}%</span>
+            <span class="kpi-sub">Out of 2,800 total capacity</span>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon icon-energy">⚡</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Energy Draw</span>
+            <span class="kpi-val" id="kpi-energy">{{ state.energy_kwh }} kWh</span>
+            <span class="kpi-sub">HVAC & smart lighting grid</span>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon icon-alerts">🚨</div>
+          <div class="kpi-info">
+            <span class="kpi-label">Active Alerts</span>
+            <span class="kpi-val" id="kpi-alerts">{{ state.alerts|length }}</span>
+            <span class="kpi-sub">Critical / warning incidents</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: SMART NAVIGATION (FEATURE 1) -->
+    <section id="navigation" class="section-block">
+      <div class="section-header">
+        <div>
+          <span class="feature-tag">Feature 1</span>
+          <h2>🗺️ Smart Campus Navigation & Live Wayfinding</h2>
+          <p class="section-sub">Interactive Leaflet GIS map with color-coded live building capacity and route guidance</p>
+        </div>
+        <div class="nav-controls">
+          <input type="text" id="mapSearchInput" placeholder="Search building (e.g. Library, CS Block)..." class="form-input-sm">
+          <button onclick="navigateOnMap()" class="btn btn-primary btn-sm">Find Route &rarr;</button>
+        </div>
+      </div>
+
+      <div class="nav-layout">
+        <div class="map-wrapper">
+          <div id="leafletMap"></div>
+          <div class="map-legend">
+            <span><span class="legend-circle green"></span> Available (&lt;55%)</span>
+            <span><span class="legend-circle orange"></span> Busy (55-85%)</span>
+            <span><span class="legend-circle red"></span> Congested (&gt;85%)</span>
+          </div>
+        </div>
+
+        <div class="nav-sidebar">
+          <h3>🏢 Live Building Capacities</h3>
+          <p class="text-muted small">Updated in real-time by IoT gateway sensors</p>
+          <div class="building-list" id="buildingList">
+            {% for loc in locations %}
+            <div class="building-item" onclick="focusBuilding({{ loc.lat }}, {{ loc.lng }}, '{{ loc.name }}', {{ loc.id }})">
+              <div class="b-header">
+                <b>{{ loc.name }}</b>
+                <span class="b-badge b-{{ loc.status }}" id="badge-{{ loc.id }}">{{ loc.pct }}%</span>
+              </div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill fill-{{ loc.status }}" id="bar-{{ loc.id }}" style="width: {{ loc.pct }}%;"></div>
+              </div>
+              <span class="b-detail"><span id="occ-{{ loc.id }}">{{ loc.occupancy }}</span> / {{ loc.capacity }} occupants</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: STUDENT PERFORMANCE PREDICTION ML (FEATURE 4) -->
+    <section id="performance" class="section-block">
+      <div class="section-header">
+        <div>
+          <span class="feature-tag">Feature 4</span>
+          <h2>🎓 Student Performance & At-Risk ML Early Warning Model</h2>
+          <p class="section-sub">Machine Learning classifier trained to identify students needing intervention before end-of-term</p>
+        </div>
+        <div class="model-badge">
+          <span class="badge-pill">Random Forest + Gradient Boosting</span>
+          <span class="badge-pill green">Accuracy: 72.6% | F1: 0.71</span>
+        </div>
+      </div>
+
+      <div class="ml-grid">
+        <div class="ml-form-card">
+          <h3>Input Student Telemetry & Academic Metrics</h3>
+          <p class="text-muted small">Adjust sliders to simulate any student profile:</p>
+
+          <div class="slider-row">
+            <div class="slider-header">
+              <label>Attendance Rate (%)</label>
+              <span id="val_attendance" class="slider-num">85%</span>
+            </div>
+            <input type="range" id="input_attendance" min="40" max="100" value="85" oninput="updateSliderVal('attendance', '%')">
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-header">
+              <label>Internal Assessment / Quiz Score (0-100)</label>
+              <span id="val_quiz" class="slider-num">78</span>
+            </div>
+            <input type="range" id="input_quiz" min="20" max="100" value="78" oninput="updateSliderVal('quiz', '')">
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-header">
+              <label>LMS Platform Logins / Week</label>
+              <span id="val_logins" class="slider-num">14</span>
+            </div>
+            <input type="range" id="input_logins" min="1" max="30" value="14" oninput="updateSliderVal('logins', '')">
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-header">
+              <label>Library Study Hours / Week</label>
+              <span id="val_library" class="slider-num">8 hrs</span>
+            </div>
+            <input type="range" id="input_library" min="0" max="25" value="8" oninput="updateSliderVal('library', ' hrs')">
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-header">
+              <label>Lab Sessions Completed (%)</label>
+              <span id="val_labs" class="slider-num">90%</span>
+            </div>
+            <input type="range" id="input_labs" min="30" max="100" value="90" oninput="updateSliderVal('labs', '%')">
+          </div>
+
+          <div class="slider-row">
+            <div class="slider-header">
+              <label>Assignment Submission Delay (Days)</label>
+              <span id="val_delay" class="slider-num">0.5 d</span>
+            </div>
+            <input type="range" id="input_delay" min="0" max="7" step="0.5" value="0.5" oninput="updateSliderVal('delay', ' d')">
+          </div>
+
+          <button onclick="runStudentPrediction()" class="btn btn-primary btn-block" style="margin-top: 15px;">
+            Run ML Early Warning Assessment &rarr;
+          </button>
+        </div>
+
+        <div class="ml-result-card" id="mlResultPanel">
+          <div class="result-placeholder" id="mlPlaceholder">
+            <span class="icon-big">🤖</span>
+            <h4>Ready for Inference</h4>
+            <p>Adjust telemetry sliders on the left and click 'Run ML Early Warning Assessment'.</p>
+          </div>
+
+          <div class="result-content" id="mlOutput" style="display: none;">
+            <div class="result-badge-banner" id="resBanner">
+              <span class="status-title">PREDICTED RISK TIER</span>
+              <h2 id="resRiskTier">On Track</h2>
+            </div>
+
+            <div class="gpa-score-box">
+              <span class="gpa-label">Estimated Semester GPA</span>
+              <span class="gpa-val" id="resGpa">8.15</span>
+              <span class="gpa-max">/ 10.0 scale</span>
+            </div>
+
+            <div class="confidence-box">
+              <h4>Class Confidence Distribution</h4>
+              <div id="confidenceBars"></div>
+            </div>
+
+            <div class="intervention-box" id="resInterventionBox">
+              <b>Recommended Automated Action:</b>
+              <p id="resInterventionText">-</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: AI MARKETPLACE & FRAUD DETECTION (FEATURE 2) -->
+    <section id="marketplace" class="section-block">
+      <div class="section-header">
+        <div>
+          <span class="feature-tag">Feature 2</span>
+          <h2>🛍️ Intelligent Campus P2P Marketplace & Fraud Guard</h2>
+          <p class="section-sub">Peer-to-peer student commerce monitored in real time by an AI Fraud & Anomaly Detection Model</p>
+        </div>
+        <div class="model-badge">
+          <span class="badge-pill">Balanced Random Forest</span>
+          <span class="badge-pill green">Fraud Detection Accuracy: 98.7%</span>
+        </div>
+      </div>
+
+      <div class="marketplace-grid">
+        <div class="market-listings">
+          <h3>Active Campus Listings</h3>
+          <div class="items-list">
+            {% for item in state.marketplace_items %}
+            <div class="item-card">
+              <div class="item-info">
+                <h4>{{ item.title }}</h4>
+                <div class="item-meta">
+                  <span>Category: <b>{{ item.category }}</b></span>
+                  <span>Seller: <b>{{ item.seller }}</b> (★ {{ item.seller_rating }})</span>
+                </div>
+              </div>
+              <div class="item-price-guard">
+                <span class="item-price">${{ "%.2f"|format(item.price) }}</span>
+                {% if item.risk == "Safe" %}
+                  <span class="badge-safe">✔ Verified Safe</span>
+                {% else %}
+                  <span class="badge-fraud">⚠️ Flagged Suspicious</span>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="fraud-test-box">
+          <h3>Test New Transaction Listing (Live AI Guard)</h3>
+          <p class="text-muted small">Verify listing safety against price deviation and suspicious seller patterns:</p>
+          
+          <div class="form-group">
+            <label>Price Deviation Ratio (1.0 = Fair Market Price)</label>
+            <input type="number" id="fraud_price_ratio" value="0.25" step="0.05" class="form-input-sm">
+            <span class="field-hint">e.g. 0.25 implies 75% underpriced (common bait scam)</span>
+          </div>
+
+          <div class="form-group">
+            <label>Seller Account Age (Days)</label>
+            <input type="number" id="fraud_seller_age" value="3" class="form-input-sm">
+          </div>
+
+          <div class="form-group">
+            <label>Seller Historical Rating (1.0 - 5.0)</label>
+            <input type="number" id="fraud_seller_rating" value="2.0" step="0.1" class="form-input-sm">
+          </div>
+
+          <div class="form-group">
+            <label>Unverified Wire Transfer / Off-Campus Payment?</label>
+            <select id="fraud_wire" class="form-input-sm">
+              <option value="1">Yes (External unverified wire transfer)</option>
+              <option value="0">No (Secure Campus Student Wallet)</option>
+            </select>
+          </div>
+
+          <button onclick="testMarketplaceFraud()" class="btn btn-warning btn-block">Inspect with AI Fraud Model &rarr;</button>
+
+          <div id="fraudResultBox" class="fraud-result" style="display: none;">
+            <h4 id="fraudVerdictText">-</h4>
+            <p id="fraudProbText">Suspicious Probability: -</p>
+            <p id="fraudExplanationText" class="small">-</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: REAL-TIME ALERTS CENTER (FEATURE 5) -->
+    <section id="alerts" class="section-block">
+      <div class="section-header">
+        <div>
+          <span class="feature-tag">Feature 5</span>
+          <h2>🚨 Real-Time Campus Alerts & Incident Stream</h2>
+          <p class="section-sub">Low-latency incident broadcasting for safety, facilities, and academic notifications</p>
+        </div>
+        <div class="alert-filter-tabs">
+          <button class="filter-btn active" onclick="filterAlerts('all', this)">All</button>
+          <button class="filter-btn" onclick="filterAlerts('critical', this)">🚨 Emergencies</button>
+          <button class="filter-btn" onclick="filterAlerts('warning', this)">📢 Updates</button>
+          <button class="filter-btn" onclick="filterAlerts('info', this)">🎉 Events</button>
+        </div>
+      </div>
+
+      <div class="alerts-layout">
+        <div class="alerts-stream-container" id="alertsStream">
+          {% for a in state.alerts %}
+          <div class="alert-item alert-{{ a.severity }}" data-sev="{{ a.severity }}">
+            <div class="a-top">
+              <span class="a-type">{{ a.type }}</span>
+              <span class="a-time">{{ a.time }}</span>
+            </div>
+            <p class="a-msg">{{ a.message }}</p>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="alert-broadcast-card">
+          <h3>Broadcast New Incident (Admin / Staff)</h3>
+          <div class="form-group">
+            <label>Severity Category</label>
+            <select id="broadcast_severity" class="form-input-sm">
+              <option value="critical">🚨 Critical Emergency</option>
+              <option value="warning">📢 Campus Warning / Update</option>
+              <option value="info">🎉 University Event Announcement</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Notification Content</label>
+            <textarea id="broadcast_msg" rows="3" class="form-input-sm" placeholder="e.g. Heavy rain alert; Lab block power maintenance..."></textarea>
+          </div>
+          <button onclick="broadcastAlert()" class="btn btn-danger btn-block">Broadcast to Campus Network &rarr;</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: PERSONALIZED AI RECOMMENDATIONS (FEATURE 6) -->
+    <section id="recommendations" class="section-block">
+      <div class="section-header">
+        <div>
+          <span class="feature-tag">Feature 6</span>
+          <h2>💡 AI-Curated Personalized Recommendations</h2>
+          <p class="section-sub">Tailored courses, academic hackathons, and research facilities recommended for you</p>
+        </div>
+        <button onclick="loadPersonalizedRecs()" class="btn btn-outline-primary btn-sm">Refresh Recommendations</button>
+      </div>
+
+      <div class="recs-grid">
+        <div class="rec-column">
+          <h3>📚 Suggested Elective Courses</h3>
+          <div id="recCourses" class="rec-list">
+            <div class="rec-card">
+              <h4>Big Data Engineering & Apache Spark</h4>
+              <p class="rec-desc">Distributed data pipelines, streaming architectures, and analytics at scale.</p>
+              <span class="tag-chip">Spark</span><span class="tag-chip">Hadoop</span><span class="tag-chip">Kafka</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rec-column">
+          <h3>🎉 Recommended Campus Events</h3>
+          <div id="recEvents" class="rec-list">
+            <div class="rec-card">
+              <h4>Smart Campus AI Hackathon 2026</h4>
+              <p class="rec-desc">Venue: Auditorium | Date: Oct 12, 2026</p>
+              <span class="tag-chip">Hackathon</span><span class="tag-chip">Big Data</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rec-column">
+          <h3>🔬 Recommended Facilities & Labs</h3>
+          <div id="recResources" class="rec-list">
+            <div class="rec-card">
+              <h4>NVIDIA GPU AI Compute Cluster</h4>
+              <p class="rec-desc">High-performance cluster for PySpark and neural network model training.</p>
+              <span class="tag-chip">CS Block</span><span class="tag-chip">Research</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: BIG DATA ARCHITECTURE & BATCH TELEMETRY -->
+    <section id="bigdata" class="section-block">
+      <div class="section-header">
+        <div>
+          <span class="feature-tag">Pipeline Hub</span>
+          <h2>🏗️ Big Data Architecture & PySpark Telemetry Engine</h2>
+          <p class="section-sub">Batch and stream processing breakdown aligning with UniPulse 2.0 slides</p>
+        </div>
+        <button onclick="fetchBigDataSummary()" class="btn btn-outline-primary btn-sm">Query Telemetry Data</button>
+      </div>
+
+      <div class="bigdata-grid">
+        <div class="pipeline-card">
+          <h3>UniPulse 2.0 End-to-End Pipeline</h3>
+          <div class="pipeline-flow">
+            <div class="flow-step">
+              <span class="flow-num">1</span>
+              <div class="flow-body"><b>Edge Ingestion:</b> Mobile App, Turnstiles, RFID sensors, and Smart Meter telemetries.</div>
+            </div>
+            <div class="flow-step">
+              <span class="flow-num">2</span>
+              <div class="flow-body"><b>Apache Kafka:</b> Low-latency distributed message broker buffering 10,000+ msgs/sec.</div>
+            </div>
+            <div class="flow-step">
+              <span class="flow-num">3</span>
+              <div class="flow-body"><b>Apache Spark Streaming:</b> Micro-batch in-memory processing for dynamic occupancy & alerts.</div>
+            </div>
+            <div class="flow-step">
+              <span class="flow-num">4</span>
+              <div class="flow-body"><b>Hadoop HDFS & Hive / Mongo:</b> Scalable data lake storing historical campus events.</div>
+            </div>
+            <div class="flow-step">
+              <span class="flow-num">5</span>
+              <div class="flow-body"><b>Spark MLlib / AI:</b> Student performance prediction and marketplace fraud detection.</div>
+            </div>
+            <div class="flow-step">
+              <span class="flow-num">6</span>
+              <div class="flow-body"><b>Interactive Portal:</b> Real-time Leaflet GIS, dynamic charts, and executive insights.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="telemetry-stats-card">
+          <h3>RFID / Turnstile Telemetry Summary</h3>
+          <div id="telemetryDataView" class="telemetry-view">
+            <p>Loading telemetry aggregation from <code>data/campus_events.csv</code>...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <div class="footer-inner">
+      <p><b>UniPulse 2.0</b> — Transforming Campus Life with Big Data, AI, and Real-Time Analytics</p>
+      <p class="small text-muted">Team Members: AMEYA VAISHNAVI K (08) · FATHIMA HISANA (23) · LIDHA IQBAL PT (29) · MANVIN RAMESAN (30) · MOHAMMED ALSABITH (33) · NIHLA (45)</p>
+    </div>
+  </footer>
+
+  <!-- JAVASCRIPT APP LOGIC -->
+  <script>
+    // 1. LEAFLET MAP SETUP
+    const map = L.map('leafletMap').setView([12.9350, 77.6060], 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    const markers = {};
+    const locationsData = {{ locations|tojson }};
+    let activeRoute = null;
+
+    function getOccupancyColor(pct) {
+      return pct > 85 ? '#e53935' : pct > 55 ? '#fb8c00' : '#43a047';
+    }
+
+    locationsData.forEach(loc => {
+      const c = getOccupancyColor(loc.pct);
+      const marker = L.circleMarker([loc.lat, loc.lng], {
+        radius: 13,
+        fillColor: c,
+        color: '#ffffff',
+        weight: 2,
+        fillOpacity: 0.85
+      }).addTo(map);
+
+      marker.bindPopup(`
+        <div style="font-family: sans-serif; font-size: 13px;">
+          <b style="font-size: 14px;">${loc.name}</b><br>
+          Occupancy: <b>${loc.occupancy} / ${loc.capacity}</b> (${loc.pct}%)<br>
+          <button onclick="navigateDirect(${loc.lat}, ${loc.lng}, '${loc.name}')" 
+                  style="margin-top:6px; background:#1e88e5; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">
+            Navigate Here
+          </button>
+        </div>
+      `);
+      markers[loc.id] = marker;
+    });
+
+    function focusBuilding(lat, lng, name, id) {
+      map.setView([lat, lng], 18);
+      if (markers[id]) markers[id].openPopup();
+    }
+
+    function navigateDirect(lat, lng, name) {
+      if (activeRoute) map.removeLayer(activeRoute);
+      activeRoute = L.polyline([[12.9350, 77.6060], [lat, lng]], {
+        color: '#1e88e5',
+        weight: 5,
+        dashArray: '8, 8'
+      }).addTo(map);
+      map.fitBounds(activeRoute.getBounds(), { padding: [40, 40] });
+    }
+
+    function navigateOnMap() {
+      const q = document.getElementById('mapSearchInput').value.toLowerCase().trim();
+      const match = locationsData.find(l => l.name.toLowerCase().includes(q));
+      if (!match) {
+        alert("Building not found! Try searching 'Library', 'CS', 'Cafeteria', or 'Auditorium'");
+        return;
+      }
+      focusBuilding(match.lat, match.lng, match.name, match.id);
+      navigateDirect(match.lat, match.lng, match.name);
+    }
+
+    // 2. SLIDER VALUES
+    function updateSliderVal(id, suffix) {
+      document.getElementById('val_' + id).textContent = document.getElementById('input_' + id).value + suffix;
+    }
+
+    // 3. STUDENT PERFORMANCE PREDICTION (FEATURE 4)
+    async function runStudentPrediction() {
+      const payload = {
+        attendance: document.getElementById('input_attendance').value,
+        internal_quiz: document.getElementById('input_quiz').value,
+        lms_logins: document.getElementById('input_logins').value,
+        library_hours: document.getElementById('input_library').value,
+        lab_sessions: document.getElementById('input_labs').value,
+        assignment_delay: document.getElementById('input_delay').value,
+        study_hours: 4.0,
+        engagement_score: 7.5
+      };
+
+      try {
+        const res = await fetch('/api/predict_student_performance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const d = await res.json();
+        if (d.status === 'success') {
+          document.getElementById('mlPlaceholder').style.display = 'none';
+          document.getElementById('mlOutput').style.display = 'block';
+
+          document.getElementById('resRiskTier').textContent = d.risk_level;
+          document.getElementById('resBanner').style.backgroundColor = d.status_color;
+          document.getElementById('resGpa').textContent = d.predicted_gpa.toFixed(2);
+          document.getElementById('resInterventionText').textContent = d.intervention;
+
+          // Confidence bars
+          let confHtml = '';
+          for (const [k, v] of Object.entries(d.confidence_distribution)) {
+            confHtml += `
+              <div style="margin-bottom: 6px;">
+                <div style="display:flex; justify-content:space-between; font-size:12px;">
+                  <span>${k}</span><span>${v}%</span>
+                </div>
+                <div class="progress-bar-bg" style="height:6px;">
+                  <div class="progress-bar-fill" style="width:${v}%; background:#1e88e5;"></div>
+                </div>
+              </div>`;
+          }
+          document.getElementById('confidenceBars').innerHTML = confHtml;
+        }
+      } catch (err) {
+        alert("Error running student prediction: " + err);
+      }
+    }
+
+    // 4. MARKETPLACE FRAUD DETECTION (FEATURE 2)
+    async function testMarketplaceFraud() {
+      const payload = {
+        price_ratio: document.getElementById('fraud_price_ratio').value,
+        seller_age_days: document.getElementById('fraud_seller_age').value,
+        seller_rating: document.getElementById('fraud_seller_rating').value,
+        past_sales: 1,
+        daily_listings: 6,
+        wire_request: document.getElementById('fraud_wire').value
+      };
+
+      try {
+        const res = await fetch('/api/detect_marketplace_fraud', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const d = await res.json();
+        const box = document.getElementById('fraudResultBox');
+        box.style.display = 'block';
+        box.style.borderColor = d.verdict_color;
+        document.getElementById('fraudVerdictText').textContent = d.verdict;
+        document.getElementById('fraudVerdictText').style.color = d.verdict_color;
+        document.getElementById('fraudProbText').textContent = `Fraud Probability: ${d.fraud_probability}%`;
+        document.getElementById('fraudExplanationText').textContent = d.explanation;
+      } catch (err) {
+        alert("Error in fraud detection: " + err);
+      }
+    }
+
+    // 5. ALERT BROADCAST & FILTERING (FEATURE 5)
+    async function broadcastAlert() {
+      const msg = document.getElementById('broadcast_msg').value.trim();
+      if (!msg) { alert("Please type an alert message."); return; }
+      const sev = document.getElementById('broadcast_severity').value;
+
+      try {
+        const res = await fetch('/api/broadcast_alert', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: msg, severity: sev })
+        });
+        const d = await res.json();
+        if (d.status === 'success') {
+          document.getElementById('broadcast_msg').value = '';
+          pollTelemetry();
+        }
+      } catch (err) {
+        alert("Error broadcasting alert: " + err);
+      }
+    }
+
+    function filterAlerts(sev, btn) {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.alert-item').forEach(el => {
+        if (sev === 'all' || el.getAttribute('data-sev') === sev) {
+          el.style.display = 'block';
+        } else {
+          el.style.display = 'none';
+        }
+      });
+    }
+
+    // 6. PERSONALIZED RECOMMENDATIONS (FEATURE 6)
+    async function loadPersonalizedRecs() {
+      try {
+        const res = await fetch('/api/get_recommendations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            major: "{{ user.department or 'Computer Science' }}",
+            gpa: 8.2,
+            risk_level: "On Track"
+          })
+        });
+        const d = await res.json();
+
+        // Render courses
+        document.getElementById('recCourses').innerHTML = d.recommended_courses.map(c => `
+          <div class="rec-card">
+            <h4>${c.title}</h4>
+            <p class="rec-desc">${c.description}</p>
+            <div>${c.tags.map(t => `<span class="tag-chip">${t}</span>`).join('')}</div>
+          </div>
+        `).join('');
+
+        // Render events
+        document.getElementById('recEvents').innerHTML = d.recommended_events.map(e => `
+          <div class="rec-card">
+            <h4>${e.title}</h4>
+            <p class="rec-desc">Venue: <b>${e.zone}</b> | ${e.date}</p>
+            <div>${e.tags.map(t => `<span class="tag-chip">${t}</span>`).join('')}</div>
+          </div>
+        `).join('');
+
+        // Render resources
+        document.getElementById('recResources').innerHTML = d.recommended_resources.map(r => `
+          <div class="rec-card">
+            <h4>${r.name}</h4>
+            <p class="rec-desc">${r.description}</p>
+            <div><span class="tag-chip">${r.zone}</span><span class="tag-chip">${r.access}</span></div>
+          </div>
+        `).join('');
+      } catch (err) {
+        console.error("Recs error", err);
+      }
+    }
+
+    // 7. BIG DATA PIPELINE SUMMARY
+    async function fetchBigDataSummary() {
+      const container = document.getElementById('telemetryDataView');
+      container.innerHTML = 'Querying telemetry data lake...';
+      try {
+        const res = await fetch('/api/big_data_summary');
+        const data = await res.json();
+        
+        let html = `
+          <div class="stat-highlight-grid">
+            <div class="stat-highlight"><span>${data.total_telemetry_events}</span><small>Total Events</small></div>
+            <div class="stat-highlight"><span>${data.total_entries}</span><small>RFID Entries</small></div>
+            <div class="stat-highlight"><span>${data.unique_students_monitored}</span><small>Unique Students</small></div>
+          </div>
+          <h4 style="margin-top:15px; margin-bottom:8px;">Campus Hotspot Zones</h4>
+          <table class="simple-table">
+            <tr><th>Zone</th><th>Total Entries</th><th>Status</th></tr>
+            ${data.top_hotspots.map(h => `
+              <tr>
+                <td><b>${h.zone}</b></td>
+                <td>${h.entries}</td>
+                <td><span class="badge-safe">Analyzed</span></td>
+              </tr>
+            `).join('')}
+          </table>
+          <h4 style="margin-top:15px; margin-bottom:8px;">Peak Congestion Hours</h4>
+          <p class="small text-muted">${data.peak_congestion_hours.map(p => `<b>${p.hour}</b> (${p.entries} entries)`).join(' · ')}</p>
+        `;
+        container.innerHTML = html;
+      } catch (err) {
+        container.innerHTML = `<span style="color:red;">Error fetching big data: ${err}</span>`;
+      }
+    }
+
+    // 8. REAL-TIME SENSOR POLLING LOOP (EVERY 3 SECONDS)
+    async function pollTelemetry() {
+      try {
+        const res = await fetch('/api/live_telemetry');
+        const data = await res.json();
+
+        document.getElementById('clock').textContent = data.timestamp;
+        document.getElementById('kpi-students').textContent = data.students_on_campus;
+        document.getElementById('kpi-occupancy').textContent = data.occupancy_percent + '%';
+        document.getElementById('kpi-energy').textContent = data.energy_kwh + ' kWh';
+        document.getElementById('kpi-alerts').textContent = data.alerts.length;
+
+        // Update map markers and building sidebar
+        data.locations.forEach(loc => {
+          const c = getOccupancyColor(loc.pct);
+          if (markers[loc.id]) {
+            markers[loc.id].setStyle({ fillColor: c });
+            markers[loc.id].setPopupContent(`
+              <div style="font-family: sans-serif; font-size: 13px;">
+                <b style="font-size: 14px;">${loc.name}</b><br>
+                Occupancy: <b>${loc.occupancy} / ${loc.capacity}</b> (${loc.pct}%)<br>
+                <button onclick="navigateDirect(${loc.lat}, ${loc.lng}, '${loc.name}')" 
+                        style="margin-top:6px; background:#1e88e5; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">
+                  Navigate Here
+                </button>
+              </div>
+            `);
+          }
+
+          // Update DOM sidebar
+          const badge = document.getElementById('badge-' + loc.id);
+          const bar = document.getElementById('bar-' + loc.id);
+          const occ = document.getElementById('occ-' + loc.id);
+          if (badge) {
+            badge.textContent = loc.pct + '%';
+            badge.className = `b-badge b-${loc.status}`;
+          }
+          if (bar) {
+            bar.style.width = loc.pct + '%';
+            bar.className = `progress-bar-fill fill-${loc.status}`;
+          }
+          if (occ) occ.textContent = loc.occupancy;
+        });
+
+        // Update alerts stream
+        const alertsContainer = document.getElementById('alertsStream');
+        alertsContainer.innerHTML = data.alerts.map(a => `
+          <div class="alert-item alert-${a.severity}" data-sev="${a.severity}">
+            <div class="a-top">
+              <span class="a-type">${a.type}</span>
+              <span class="a-time">${a.time}</span>
+            </div>
+            <p class="a-msg">${a.message}</p>
+          </div>
+        `).join('');
+
+      } catch (err) {
+        console.error("Telemetry fetch error:", err);
+      }
+    }
+
+    // INITIALIZE ON LOAD
+    window.addEventListener('DOMContentLoaded', () => {
+      loadPersonalizedRecs();
+      fetchBigDataSummary();
+      setInterval(pollTelemetry, 3000);
+    });
+  </script>
+</body>
+</html>
